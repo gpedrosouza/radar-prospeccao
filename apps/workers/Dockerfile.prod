@@ -1,0 +1,81 @@
+# =============================================================================
+# Radar Prospecção — Dockerfile de produção para apps/workers
+# Build context: raiz do monorepo
+#   docker build -f apps/workers/Dockerfile.prod -t radar-workers:prod .
+# =============================================================================
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 1 — deps
+# ─────────────────────────────────────────────────────────────────────────────
+FROM node:20-alpine AS deps
+
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /app
+
+COPY package.json package-lock.json tsconfig.base.json ./
+COPY packages/db/package.json     packages/db/
+COPY packages/shared/package.json packages/shared/
+COPY apps/workers/package.json    apps/workers/
+# apps/web precisa existir no workspace para o npm ci não reclamar
+COPY apps/web/package.json        apps/web/
+
+RUN npm ci
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 2 — builder: compila TypeScript
+# ─────────────────────────────────────────────────────────────────────────────
+FROM node:20-alpine AS builder
+
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Regenera Prisma Client para linux-musl
+RUN npm run db:generate --workspace=packages/db
+
+# Compila na ordem de dependência
+RUN npm run build --workspace=packages/shared
+RUN npm run build --workspace=packages/db
+RUN npm run build --workspace=apps/workers
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 3 — runner: imagem final mínima
+# ─────────────────────────────────────────────────────────────────────────────
+FROM node:20-alpine AS runner
+
+# libc6-compat para addons nativos; postgresql16-client para pg_dump/pg_restore (backup-cron + migrator)
+RUN apk add --no-cache libc6-compat postgresql16-client
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser  --system --uid 1001 worker
+
+# node_modules completo (inclui .prisma/client com binários para linux-musl
+# e prisma CLI — necessário para o serviço migrator rodar prisma migrate deploy)
+COPY --from=deps    --chown=worker:nodejs /app/node_modules  ./node_modules
+COPY --from=deps    --chown=worker:nodejs /app/package.json  ./
+
+# packages compilados — as symlinks em node_modules/@radar/* apontam para cá
+COPY --from=builder --chown=worker:nodejs /app/packages/shared/dist         ./packages/shared/dist
+COPY --from=builder --chown=worker:nodejs /app/packages/shared/package.json ./packages/shared/
+COPY --from=builder --chown=worker:nodejs /app/packages/db/dist             ./packages/db/dist
+COPY --from=builder --chown=worker:nodejs /app/packages/db/package.json     ./packages/db/
+
+# Schema e migrations do Prisma — lidos em tempo de execução pelo migrator
+# (prisma migrate deploy precisa destes arquivos para aplicar migrations)
+COPY --from=builder --chown=worker:nodejs /app/packages/db/prisma           ./packages/db/prisma
+
+# Código compilado dos workers
+COPY --from=builder --chown=worker:nodejs /app/apps/workers/dist            ./apps/workers/dist
+COPY --from=builder --chown=worker:nodejs /app/apps/workers/package.json    ./apps/workers/
+
+USER worker
+
+CMD ["node", "apps/workers/dist/index.js"]

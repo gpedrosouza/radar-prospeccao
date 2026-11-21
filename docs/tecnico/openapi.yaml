@@ -1,0 +1,1077 @@
+openapi: 3.1.0
+info:
+  title: Radar de Prospecção Geográfica — API
+  version: 2.0.0
+  description: |
+    API interna do sistema Radar de Prospecção Geográfica.
+
+    ## Autenticação
+    Todas as rotas (exceto `/api/health`) exigem autenticação via sessão JWT.
+    O token é transmitido automaticamente pelo browser via cookie `next-auth.session-token`.
+
+    Em chamadas programáticas (curl, scripts), inclua o cookie de sessão obtido via login.
+
+    ## Erros padronizados
+    Todos os erros retornam JSON com ao menos o campo `error` (string).
+
+    ## Tipos especiais
+    - `BigInt` é serializado como `string` em todos os campos JSON (limitação do JSON.stringify nativo).
+    - Datas são retornadas em formato ISO 8601 (`YYYY-MM-DDTHH:mm:ss.sssZ`).
+
+servers:
+  - url: https://radar.suaempresa.com.br
+    description: Produção
+  - url: http://localhost:3000
+    description: Desenvolvimento local
+
+tags:
+  - name: Health
+    description: Verificação de saúde do sistema
+  - name: Auth
+    description: Autenticação
+  - name: Cities
+    description: Busca geoespacial de cidades
+  - name: Places
+    description: Busca de estabelecimentos via Google Places
+  - name: CNPJ
+    description: Busca e exportação de CNPJs
+  - name: Export Jobs
+    description: Gerenciamento de jobs de exportação
+  - name: Campaigns
+    description: Campanhas de e-mail
+  - name: Unsubscribe
+    description: Descadastro de campanhas
+  - name: Webhooks
+    description: Webhooks de serviços externos
+
+paths:
+
+  # ============================================================
+  # HEALTH
+  # ============================================================
+  /api/health:
+    get:
+      tags: [Health]
+      summary: Verificação de saúde
+      description: |
+        Verifica a conectividade com Postgres e Redis em paralelo.
+        Rota pública — não requer autenticação.
+        Destinada a ferramentas de monitoramento externo (UptimeRobot, etc.).
+      security: []
+      responses:
+        '200':
+          description: Todos os serviços saudáveis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  postgres:
+                    type: string
+                    example: ok
+                  redis:
+                    type: string
+                    example: ok
+        '503':
+          description: Um ou mais serviços indisponíveis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: degraded
+                  postgres:
+                    type: string
+                    example: error
+                  redis:
+                    type: string
+                    example: ok
+                  detail:
+                    type: string
+
+  # ============================================================
+  # CITIES
+  # ============================================================
+  /api/cities/radius:
+    get:
+      tags: [Cities]
+      summary: Listar municípios dentro de um raio
+      description: |
+        Retorna municípios (cidades do tipo 'municipio') dentro do raio especificado
+        a partir de um ponto geográfico, usando PostGIS ST_DWithin.
+
+        Utilizado pelo frontend para resolver quais municípios incluir nos filtros de CNPJ
+        quando o banker define uma área geográfica no mapa.
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+            minimum: -90
+            maximum: 90
+          example: -23.5505
+          description: Latitude do ponto central
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+            minimum: -180
+            maximum: 180
+          example: -46.6333
+          description: Longitude do ponto central
+        - name: raio_km
+          in: query
+          required: true
+          schema:
+            type: number
+            minimum: 0.1
+            maximum: 500
+          example: 50
+          description: Raio de busca em quilômetros
+      responses:
+        '200':
+          description: Lista de municípios no raio
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cities:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/City'
+                  total:
+                    type: integer
+                    example: 23
+        '400':
+          $ref: '#/components/responses/InvalidParams'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================================
+  # PLACES
+  # ============================================================
+  /api/places/companies:
+    get:
+      tags: [Places]
+      summary: Buscar estabelecimentos via Google Places
+      description: |
+        Consulta o Google Places API para encontrar estabelecimentos na área especificada.
+        Resultados são cacheados por célula de grid geográfico (0,1° × 0,1°) e keyword
+        por até 30 dias (configurável via PLACES_CACHE_TTL_DAYS).
+
+        O raio máximo é 50km — para áreas maiores, fazer múltiplas chamadas.
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+          example: -23.5505
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+          example: -46.6333
+        - name: raio_km
+          in: query
+          required: true
+          schema:
+            type: number
+            maximum: 50
+          example: 10
+        - name: keyword
+          in: query
+          required: false
+          schema:
+            type: string
+            default: ""
+          example: "restaurante"
+          description: Palavra-chave para filtrar resultados do Places
+      responses:
+        '200':
+          description: Lista de estabelecimentos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  places:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Place'
+                  total:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  # ============================================================
+  # CNPJ — COMPANIES
+  # ============================================================
+  /api/cnpj/companies:
+    get:
+      tags: [CNPJ]
+      summary: Buscar empresas por filtros
+      description: |
+        Busca paginada de empresas da base da Receita Federal com filtros de negócio
+        e geolocalização.
+
+        ## Paginação cursor-based
+        Use o campo `nextCursor` da resposta como parâmetro `cursor` da próxima requisição.
+        A paginação é estável mesmo com inserts simultâneos (ao contrário de OFFSET).
+
+        ## Contagem com teto
+        O campo `count` é limitado a 10.000. Se `countExact = false`, há mais registros
+        do que o teto. Refine os filtros para obter a contagem exata.
+
+        ## Geo + município
+        Se `lat`, `lng` e `raio_km` forem fornecidos, o sistema resolve automaticamente
+        os municípios dentro do raio e os usa como filtro. `municipio_codigo` serve como
+        fallback quando o raio não retorna resultados.
+      parameters:
+        - name: uf
+          in: query
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 2
+          example: SP
+          description: UF (estado) — ativa partition pruning quando presente
+        - name: lat
+          in: query
+          schema:
+            type: number
+          example: -23.5505
+        - name: lng
+          in: query
+          schema:
+            type: number
+          example: -46.6333
+        - name: raio_km
+          in: query
+          schema:
+            type: number
+            maximum: 500
+          example: 40
+          description: Obrigatório junto com lat e lng — não pode vir isolado
+        - name: municipio_codigo
+          in: query
+          schema:
+            type: integer
+          example: 3550308
+          description: Código IBGE do município (fallback ou filtro direto)
+        - name: situacao
+          in: query
+          schema:
+            type: string
+          example: Ativa
+        - name: cnae_prefixo
+          in: query
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 7
+          example: "641"
+          description: Prefixo do CNAE principal (busca por prefixo)
+        - name: porte
+          in: query
+          schema:
+            type: string
+            enum: [ME, EPP, MEDIO, GRANDE, DEMAIS]
+          example: ME
+        - name: matriz_filial
+          in: query
+          schema:
+            type: string
+            enum: [MATRIZ, FILIAL]
+        - name: opcao_simples
+          in: query
+          schema:
+            type: string
+            enum: ["true", "false"]
+          description: Optante pelo Simples Nacional
+        - name: opcao_mei
+          in: query
+          schema:
+            type: string
+            enum: ["true", "false"]
+          description: Microempreendedor Individual
+        - name: data_abertura_de
+          in: query
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+          example: "2010-01-01"
+        - name: data_abertura_ate
+          in: query
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+          example: "2023-12-31"
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            pattern: '^\d+$'
+          description: Cursor para próxima página (valor de `nextCursor` da resposta anterior)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2000
+            default: 100
+      responses:
+        '200':
+          description: Página de empresas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CnpjListItem'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                    description: Cursor para próxima página; null = última página
+                    example: "12345678"
+                  count:
+                    type: integer
+                    description: Total encontrado (até 10.000)
+                    example: 3847
+                  countExact:
+                    type: boolean
+                    description: false = há mais que o teto de 10.000
+        '400':
+          $ref: '#/components/responses/InvalidParams'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================================
+  # EXPORT JOBS
+  # ============================================================
+  /api/cnpj/export-jobs:
+    get:
+      tags: [Export Jobs]
+      summary: Listar exportações do usuário
+      description: Retorna todos os jobs de exportação do usuário autenticado, do mais recente ao mais antigo.
+      responses:
+        '200':
+          description: Lista de jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ExportJob'
+                  total:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Export Jobs]
+      summary: Criar job de exportação
+      description: |
+        Cria um novo job de exportação assíncrono e o enfileira no BullMQ.
+        Retorna imediatamente com o ID do job. O progresso pode ser acompanhado
+        via SSE em `/api/cnpj/export-jobs/{id}/stream`.
+
+        ## Rate limits
+        - Máximo de 5 jobs simultâneos (queued + running) por usuário → 429
+        - Máximo de 10 jobs por hora por usuário → 429
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CnpjSearchFilters'
+            example:
+              uf: SP
+              lat: -23.5505
+              lng: -46.6333
+              raio_km: 40
+              situacao: Ativa
+              cnae_prefixo: "641"
+      responses:
+        '201':
+          description: Job criado e enfileirado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [queued]
+                  criado_em:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/InvalidParams'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          description: Rate limit excedido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: rate_limit_excedido
+                  detail:
+                    type: string
+                    example: "Limite de 5 exportações simultâneas atingido."
+
+  /api/cnpj/export-jobs/{id}:
+    get:
+      tags: [Export Jobs]
+      summary: Detalhe de um job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detalhe do job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportJob'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/cnpj/export-jobs/{id}/download:
+    get:
+      tags: [Export Jobs]
+      summary: Obter URL pré-assinada de download
+      description: |
+        Gera uma URL pré-assinada do Cloudflare R2 com validade de 4 horas
+        (configurável via CNPJ_EXPORT_PRESIGNED_URL_EXPIRY_HOURS).
+        A URL permite download direto pelo browser sem autenticação.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: URL pré-assinada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  downloadUrl:
+                    type: string
+                    format: uri
+        '400':
+          description: Job ainda não concluído (sem arquivo disponível)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/cnpj/export-jobs/{id}/stream:
+    get:
+      tags: [Export Jobs]
+      summary: Stream SSE de progresso do job
+      description: |
+        Abre uma conexão Server-Sent Events que emite eventos de progresso
+        a cada mudança de status ou progresso_pct.
+
+        ## Eventos SSE
+
+        **Em andamento:**
+        ```json
+        { "status": "queued" | "running", "progresso_pct": 42, "linhas": null }
+        ```
+
+        **Concluído:**
+        ```json
+        { "status": "completed", "progresso_pct": 100, "linhas": 41892, "downloadUrl": "https://..." }
+        ```
+
+        **Falha:**
+        ```json
+        { "status": "failed", "erro": "mensagem de erro" }
+        ```
+
+        O stream se encerra automaticamente quando o job atinge `completed` ou `failed`.
+        O browser (EventSource) reconecta automaticamente se a conexão cair.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Stream SSE
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================
+  # CAMPAIGNS
+  # ============================================================
+  /api/campaigns:
+    get:
+      tags: [Campaigns]
+      summary: Listar campanhas do usuário
+      responses:
+        '200':
+          description: Lista de campanhas com métricas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CampaignWithStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Campaigns]
+      summary: Criar campanha de e-mail
+      description: |
+        Cria uma campanha em status `rascunho` com a lista de destinatários
+        montada a partir dos filtros (bounces e unsubscribes já excluídos).
+
+        ## Variáveis de template disponíveis
+        - `{{razao_social}}`
+        - `{{nome_fantasia}}`
+        - `{{cnpj}}` — sem formatação (14 dígitos)
+        - `{{cnpj_formatado}}` — com pontuação (XX.XXX.XXX/XXXX-XX)
+        - `{{municipio_nome}}`
+        - `{{uf}}`
+        - `{{cnae_principal}}`
+        - `{{link_descadastro}}` — URL de one-click unsubscribe (RFC 8058)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nome, filtros_origem, assunto, corpo_template]
+              properties:
+                nome:
+                  type: string
+                  example: "Prospecção SP - Comércio Janeiro 2027"
+                filtros_origem:
+                  $ref: '#/components/schemas/CnpjSearchFilters'
+                assunto:
+                  type: string
+                  example: "Proposta de serviços bancários para {{razao_social}}"
+                corpo_template:
+                  type: string
+                  example: "Olá,\n\nEntro em contato com {{razao_social}} (CNPJ {{cnpj_formatado}})..."
+      responses:
+        '201':
+          description: Campanha criada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  nome:
+                    type: string
+                  status:
+                    type: string
+                    enum: [rascunho]
+                  total_destinatarios:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /api/campaigns/{id}/send:
+    post:
+      tags: [Campaigns]
+      summary: Disparar campanha
+      description: |
+        Inicia o envio assíncrono de uma campanha via BullMQ.
+
+        Antes do envio:
+        1. Reconstrói a lista de destinatários com exclusões atualizadas (bounces/unsubscribes adicionados após criação)
+        2. Atualiza status para `enviando`
+        3. Enfileira o job (idempotente — jobId = campaignId)
+
+        Retorna 202 imediatamente. O worker processa o envio em background.
+
+        **Requer validação jurídica/compliance antes de usar em produção.**
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '202':
+          description: Campanha enfileirada para envio
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  total_destinatarios:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Status inválido ou sem destinatários elegíveis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  detail:
+                    type: string
+
+  # ============================================================
+  # UNSUBSCRIBE
+  # ============================================================
+  /api/unsubscribe:
+    get:
+      tags: [Unsubscribe]
+      summary: Verificar token e exibir confirmação
+      description: |
+        Valida o token HMAC de descadastro e exibe a página de confirmação.
+        Token é gerado no momento do envio do e-mail e inclui e-mail + campaignId.
+      security: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Token HMAC-SHA256 gerado pelo sistema
+      responses:
+        '200':
+          description: Página de confirmação de descadastro
+        '400':
+          description: Token inválido ou ausente
+
+    post:
+      tags: [Unsubscribe]
+      summary: Confirmar descadastro (RFC 8058 one-click)
+      description: |
+        Registra o descadastro do e-mail. Após isso, o endereço nunca mais
+        receberá campanhas deste sistema.
+
+        Suporta one-click unsubscribe conforme RFC 8058 (reconhecido pelo Gmail e Yahoo).
+      security: []
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                List-Unsubscribe:
+                  type: string
+                  enum: ["One-Click"]
+      responses:
+        '200':
+          description: Descadastro confirmado
+        '400':
+          description: Token inválido
+
+  # ============================================================
+  # WEBHOOKS
+  # ============================================================
+  /api/webhooks/resend:
+    post:
+      tags: [Webhooks]
+      summary: Webhook de eventos Resend
+      description: |
+        Endpoint interno chamado pelo Resend via SVIX para notificar eventos de e-mail.
+
+        **Eventos tratados:**
+        - `email.bounced` → bounce hard + atualiza status do destinatário
+        - `email.complained` → bounce hard + unsubscribe permanente
+        - `email.delivered` → status = enviado
+        - `email.opened` → status = aberto
+        - `email.clicked` → status = clicado
+        - `email.received` → status = respondido (Resend Inbound)
+
+        **Segurança:** Assinatura SVIX verificada em toda requisição.
+        Timestamp com tolerância de 5 minutos (anti-replay).
+      security: []
+      parameters:
+        - name: svix-id
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: svix-timestamp
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: svix-signature
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [email.sent, email.delivered, email.bounced, email.complained, email.opened, email.clicked, email.received]
+                data:
+                  type: object
+      responses:
+        '200':
+          description: Evento processado com sucesso
+        '400':
+          description: Assinatura inválida ou JSON mal-formado
+        '500':
+          description: Erro interno (Resend tentará reenviar)
+
+# ============================================================
+# COMPONENTS
+# ============================================================
+components:
+
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+
+  security:
+    - cookieAuth: []
+
+  schemas:
+
+    CnpjSearchFilters:
+      type: object
+      description: Filtros de busca de CNPJs. lat, lng e raio_km devem vir juntos ou nenhum.
+      properties:
+        uf:
+          type: string
+          minLength: 2
+          maxLength: 2
+          example: SP
+        lat:
+          type: number
+          minimum: -90
+          maximum: 90
+        lng:
+          type: number
+          minimum: -180
+          maximum: 180
+        raio_km:
+          type: number
+          minimum: 0.1
+          maximum: 500
+        municipio_codigo:
+          type: integer
+          description: Código IBGE do município
+        situacao:
+          type: string
+          example: Ativa
+        cnae_prefixo:
+          type: string
+          minLength: 1
+          maxLength: 7
+          example: "641"
+        porte:
+          type: string
+        matriz_filial:
+          type: string
+          enum: [MATRIZ, FILIAL]
+        opcao_simples:
+          type: boolean
+        opcao_mei:
+          type: boolean
+        data_abertura_de:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        data_abertura_ate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+
+    CnpjListItem:
+      type: object
+      properties:
+        id:
+          type: string
+          description: BigInt serializado como string
+          example: "12345678901"
+        cnpj:
+          type: string
+          example: "12345678000190"
+        razao_social:
+          type: string
+          example: "EMPRESA EXEMPLO LTDA"
+        nome_fantasia:
+          type: string
+          nullable: true
+        uf:
+          type: string
+          example: SP
+        municipio_nome:
+          type: string
+          example: "São Paulo"
+        cnae_principal:
+          type: string
+          example: "6412001"
+        situacao:
+          type: string
+          example: Ativa
+        porte:
+          type: string
+          nullable: true
+        opcao_simples:
+          type: boolean
+        opcao_mei:
+          type: boolean
+        email:
+          type: string
+          nullable: true
+        telefone:
+          type: string
+          nullable: true
+
+    City:
+      type: object
+      properties:
+        id:
+          type: integer
+        codigo_ibge:
+          type: integer
+          example: 3550308
+        nome:
+          type: string
+          example: São Paulo
+        uf:
+          type: string
+          example: SP
+        latitude:
+          type: number
+        longitude:
+          type: number
+        distancia_km:
+          type: number
+          description: Distância até o ponto de origem (presente em buscas por raio)
+
+    Place:
+      type: object
+      description: Estabelecimento retornado pelo Google Places API
+      properties:
+        place_id:
+          type: string
+        name:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        types:
+          type: array
+          items:
+            type: string
+        rating:
+          type: number
+          nullable: true
+        vicinity:
+          type: string
+          nullable: true
+
+    ExportJob:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        usuario_id:
+          type: string
+          format: uuid
+        filtros:
+          $ref: '#/components/schemas/CnpjSearchFilters'
+        status:
+          type: string
+          enum: [queued, running, completed, failed]
+        linhas:
+          type: integer
+          nullable: true
+        tamanho_bytes:
+          type: string
+          nullable: true
+          description: BigInt serializado como string
+        storage_key:
+          type: string
+          nullable: true
+        progresso_pct:
+          type: integer
+          minimum: 0
+          maximum: 100
+        erro:
+          type: string
+          nullable: true
+        criado_em:
+          type: string
+          format: date-time
+        concluido_em:
+          type: string
+          format: date-time
+          nullable: true
+
+    CampaignWithStats:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nome:
+          type: string
+        status:
+          type: string
+          enum: [rascunho, agendada, enviando, concluida, falhou]
+        total_destinatarios:
+          type: integer
+        total_enviados:
+          type: integer
+        total_bounces:
+          type: integer
+        criado_em:
+          type: string
+          format: date-time
+        enviado_em:
+          type: string
+          format: date-time
+          nullable: true
+        stats:
+          type: object
+          properties:
+            taxa_abertura:
+              type: number
+              format: float
+              description: Percentual de destinatários que abriram o e-mail
+            taxa_clique:
+              type: number
+              format: float
+            taxa_resposta:
+              type: number
+              format: float
+            taxa_bounce:
+              type: number
+              format: float
+
+  responses:
+    Unauthorized:
+      description: Não autenticado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: unauthorized
+
+    Forbidden:
+      description: Acesso negado (autenticado mas sem permissão)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: forbidden
+
+    NotFound:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: not_found
+
+    InvalidParams:
+      description: Parâmetros inválidos
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: invalid_params
+              details:
+                type: object
+                description: Detalhes de validação Zod
+
+    UnprocessableEntity:
+      description: Entidade não processável (erro de negócio)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              detail:
+                type: string

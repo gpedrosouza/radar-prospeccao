@@ -1,0 +1,51 @@
+# =============================================================================
+# Radar Prospecção — Caddyfile de produção
+#
+# Variáveis lidas do ambiente (passadas via docker-compose.prod.yml):
+#   DOMAIN      — domínio público, ex: radar.suaempresa.com.br
+#   ACME_EMAIL  — e-mail para notificações de expiração do certificado TLS
+#
+# O Caddy obtém e renova o certificado TLS automaticamente via Let's Encrypt.
+# =============================================================================
+
+{
+    # E-mail para notificações de expiração do certificado
+    email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+    # Compressão de resposta
+    encode gzip zstd
+
+    # ── SSE: Server-Sent Events (progresso de exportação) ─────────────────────
+    # Flush imediato para que os eventos cheguem ao cliente sem buffering.
+    # Timeout longo para jobs que podem demorar horas.
+    @sse {
+        path /api/cnpj/export-jobs/*/stream
+    }
+    handle @sse {
+        reverse_proxy web:3000 {
+            flush_interval -1
+            transport http {
+                read_timeout 4h
+            }
+        }
+    }
+
+    # ── Tráfego geral ─────────────────────────────────────────────────────────
+    reverse_proxy web:3000 {
+        # Passa IP real do cliente para o Next.js
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Headers de segurança
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options    nosniff
+        X-Frame-Options           SAMEORIGIN
+        Referrer-Policy           strict-origin-when-cross-origin
+        # Remove o header que expõe Caddy
+        -Server
+    }
+}

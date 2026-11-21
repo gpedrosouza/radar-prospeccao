@@ -1,0 +1,71 @@
+# Dependências
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+.next/
+out/
+# distDir alternativo para builds de verificação rodados com o dev server ativo
+# (NEXT_DIST_DIR=.next-build) — ver distDir em apps/web/next.config.ts
+.next-build/
+
+# Build outputs
+dist/
+build/
+
+# Variáveis de ambiente
+.env
+.env.local
+.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.production
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Dados baixados da Receita Federal
+dados_abertos_cnpj/
+*.zip
+
+# CNEFE/IBGE bruto (~21 GB, arquivos individuais de até 870 MB — acima do
+# limite de 100 MB por arquivo do GitHub). Baixado sob demanda por
+# apps/workers/src/scripts/import-cnefe.ts
+cnefe/
+
+# Saídas de exportação e enriquecimento — dado de empresa real, nunca versionar
+# (mesma regra de test-emails*.txt abaixo; ver docs/juridico-lgpd-patente.md)
+Extrações/
+BASE_ENRIQUECIDA_LEADS*.xlsx
+scripts/leads-input.json
+scripts/matches-receita.*
+scripts/web-targets.json
+
+# Templates de e-mail comercial — conteúdo de campanha da GR, não código
+campanhas/
+
+# Exportações CSV geradas localmente (em produção vão para R2)
+exports/
+
+# Listas de e-mail de teste (dado pessoal, nunca commitar) — ver
+# apps/workers/src/scripts/seed-test-emails.ts
+test-emails*.txt
+
+# Prisma generated (keep schema, ignore generated client inside packages)
+packages/db/node_modules/

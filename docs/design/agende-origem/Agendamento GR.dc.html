@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+html{scroll-behavior:smooth}
+body{margin:0;background:#00222f;font-family:'Montserrat',sans-serif;color:#f4f6f8}
+a{color:#00B3A9;text-decoration:none}
+a:hover{color:#33cfc6}
+input{font-family:'Montserrat',sans-serif}
+input::placeholder{color:rgba(255,255,255,.3)}
+@keyframes grFade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+
+<!-- ══ CABEÇALHO ══ -->
+<div data-screen-label="Cabeçalho" style="position:relative;overflow:hidden;background:linear-gradient(160deg,#003650 0%,#00222f 70%);padding:28px 24px 56px">
+  <div style="position:absolute;top:0;right:0;width:300px;height:220px;clip-path:polygon(100% 0,25% 0,100% 100%);background:rgba(0,179,169,.06)"></div>
+  <div style="position:relative;max-width:640px;margin:0 auto">
+    <a href="{{ linkHome }}" style="display:inline-flex;align-items:baseline;gap:12px">
+      <span style="font-family:'Instrument Serif',serif;font-size:30px;color:#fff;letter-spacing:1px">GR</span>
+      <span style="font-size:10px;letter-spacing:4px;color:rgba(255,255,255,.55);font-weight:300">GESTÃO FINANCEIRA</span>
+    </a>
+    <div style="margin-top:44px;animation:grFade .8s ease both">
+      <div style="font-size:11px;letter-spacing:5px;color:#00B3A9;font-weight:700;margin-bottom:20px">DIAGNÓSTICO GRATUITO</div>
+      <h1 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(34px,7vw,52px);line-height:1.12;letter-spacing:-.5px;color:#fff">Agende seu <em style="color:#00B3A9">diagnóstico financeiro</em> com um assessor GR.</h1>
+      <p style="margin:20px 0 0;font-size:14px;line-height:1.8;color:rgba(255,255,255,.6);font-weight:300">30 minutos, por videochamada, sem compromisso. Resposta de confirmação em até 1 dia útil.</p>
+    </div>
+  </div>
+</div>
+
+<sc-if value="{{ emFluxo }}" hint-placeholder-val="{{ true }}">
+<div style="max-width:640px;margin:0 auto;padding:0 24px">
+
+  <!-- ══ DADOS ══ -->
+  <div data-screen-label="Dados do lead" style="padding:48px 0 0;animation:grFade .6s ease both">
+    <div style="font-size:11px;letter-spacing:4px;color:#00B3A9;font-weight:700">01 · SEUS DADOS</div>
+    <div style="width:48px;height:2px;background:#00B3A9;margin:16px 0 28px"></div>
+    <div style="display:grid;gap:22px">
+      <div style="display:grid;gap:8px">
+        <label for="ag-nome" style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.55);font-weight:600">NOME</label>
+        <input id="ag-nome" type="text" value="{{ nome }}" onChange="{{ setNome }}" placeholder="Seu nome completo" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.18);color:#fff;padding:16px;font-size:15px;border-radius:2px" style-focus="border-color:#00B3A9;outline:none">
+      </div>
+      <div style="display:grid;gap:8px">
+        <label for="ag-email" style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.55);font-weight:600">E-MAIL</label>
+        <input id="ag-email" type="email" value="{{ email }}" onChange="{{ setEmail }}" placeholder="voce@empresa.com.br" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.18);color:#fff;padding:16px;font-size:15px;border-radius:2px" style-focus="border-color:#00B3A9;outline:none">
+      </div>
+      <div style="display:grid;gap:8px">
+        <label for="ag-tel" style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.55);font-weight:600">TELEFONE <span style="color:rgba(255,255,255,.35);font-weight:400;letter-spacing:1px;text-transform:none">(opcional)</span></label>
+        <input id="ag-tel" type="tel" value="{{ telefone }}" onChange="{{ setTelefone }}" placeholder="(16) 9 0000-0000" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.18);color:#fff;padding:16px;font-size:15px;border-radius:2px" style-focus="border-color:#00B3A9;outline:none">
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ DATA ══ -->
+  <div data-screen-label="Seleção de data" style="padding:56px 0 0;animation:grFade .6s ease both">
+    <div style="font-size:11px;letter-spacing:4px;color:#00B3A9;font-weight:700">02 · ESCOLHA A DATA</div>
+    <div style="width:48px;height:2px;background:#00B3A9;margin:16px 0 28px"></div>
+    <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;scrollbar-width:thin">
+      <sc-for list="{{ dias }}" as="d" hint-placeholder-count="7">
+        <button onClick="{{ d.pick }}" style="{{ d.style }}">
+          <div style="font-size:10px;letter-spacing:2px;font-weight:600;opacity:.75">{{ d.dow }}</div>
+          <div style="font-family:'Instrument Serif',serif;font-size:26px;line-height:1.2">{{ d.num }}</div>
+          <div style="font-size:10px;letter-spacing:2px;opacity:.75">{{ d.mes }}</div>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ══ HORÁRIO ══ -->
+  <sc-if value="{{ diaEscolhido }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Seleção de horário" style="padding:56px 0 0;animation:grFade .45s ease both">
+    <div style="font-size:11px;letter-spacing:4px;color:#00B3A9;font-weight:700">03 · ESCOLHA O HORÁRIO</div>
+    <div style="width:48px;height:2px;background:#00B3A9;margin:16px 0 12px"></div>
+    <div style="font-size:13px;color:rgba(255,255,255,.55);font-weight:300;margin-bottom:24px">{{ diaFull }}</div>
+    <sc-if value="{{ erro }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="Estado de erro" style="margin-bottom:20px;padding:16px 20px;background:rgba(216,160,70,.08);border:1px solid rgba(216,160,70,.4);border-radius:2px;animation:grFade .4s ease both">
+        <div style="font-size:12px;font-weight:700;letter-spacing:1.5px;color:#e0b56a">HORÁRIO INDISPONÍVEL</div>
+        <div style="font-size:13px;line-height:1.7;color:rgba(255,255,255,.7);margin-top:6px">Esse horário acabou de ser reservado por outra pessoa. Escolha outro horário disponível abaixo.</div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ temHorarios }}" hint-placeholder-val="{{ true }}">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px">
+        <sc-for list="{{ horarios }}" as="h" hint-placeholder-count="8">
+          <button onClick="{{ h.pick }}" style="{{ h.style }}">{{ h.label }}</button>
+        </sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{ semHorarios }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:28px 24px;border:1px dashed rgba(255,255,255,.2);border-radius:2px;text-align:center">
+        <div style="font-size:14px;color:rgba(255,255,255,.65);font-weight:300;line-height:1.7">Nenhum horário disponível nesse dia.<br>Escolha outra data acima.</div>
+      </div>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <!-- ══ CONFIRMAÇÃO ══ -->
+  <div data-screen-label="Confirmação" style="padding:56px 0 72px;animation:grFade .6s ease both">
+    <sc-if value="{{ temResumo }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-bottom:20px;padding:18px 22px;border:1px solid rgba(0,179,169,.3);background:rgba(0,179,169,.06);border-radius:2px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+        <div style="font-size:11px;letter-spacing:2px;color:#00B3A9;font-weight:700">SUA REUNIÃO</div>
+        <div style="font-family:'Instrument Serif',serif;font-size:20px;color:#fff">{{ resumoCurto }}</div>
+      </div>
+    </sc-if>
+    <button onClick="{{ confirmar }}" style="{{ btnConfirmarStyle }}">CONFIRMAR AGENDAMENTO</button>
+    <sc-if value="{{ mostrarPendencias }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top:14px;font-size:12px;color:#e0b56a;line-height:1.7">{{ pendencias }}</div>
+    </sc-if>
+  </div>
+
+</div>
+</sc-if>
+
+<!-- ══ SUCESSO ══ -->
+<sc-if value="{{ emSucesso }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Sucesso" style="max-width:640px;margin:0 auto;padding:56px 24px 80px;animation:grFade .6s ease both">
+  <div style="width:64px;height:64px;border:2px solid #00B3A9;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;color:#00B3A9">✓</div>
+  <h2 style="margin:28px 0 0;font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(30px,6vw,42px);line-height:1.15;color:#fff">Reunião <em style="color:#00B3A9">confirmada</em>.</h2>
+  <p style="margin:16px 0 0;font-size:14px;line-height:1.8;color:rgba(255,255,255,.6);font-weight:300">Enviamos a confirmação e o convite de calendário para <strong style="color:#fff;font-weight:600">{{ emailResumo }}</strong>.</p>
+  <div style="margin-top:36px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.12)">
+    <div style="background:#00222f;padding:20px 18px"><div style="font-size:10px;letter-spacing:2px;color:rgba(255,255,255,.45);font-weight:600">DATA</div><div style="font-family:'Instrument Serif',serif;font-size:20px;color:#fff;margin-top:6px">{{ sucessoData }}</div></div>
+    <div style="background:#00222f;padding:20px 18px"><div style="font-size:10px;letter-spacing:2px;color:rgba(255,255,255,.45);font-weight:600">HORÁRIO</div><div style="font-family:'Instrument Serif',serif;font-size:20px;color:#fff;margin-top:6px">{{ sucessoHora }}</div></div>
+    <div style="background:#00222f;padding:20px 18px"><div style="font-size:10px;letter-spacing:2px;color:rgba(255,255,255,.45);font-weight:600">DURAÇÃO</div><div style="font-family:'Instrument Serif',serif;font-size:20px;color:#fff;margin-top:6px">30 min</div></div>
+  </div>
+  <div style="margin-top:20px;padding:24px;border:1px solid rgba(0,179,169,.3);background:rgba(0,179,169,.06);border-radius:2px">
+    <div style="font-size:11px;letter-spacing:2px;color:#00B3A9;font-weight:700">LINK DA VIDEOCHAMADA · GOOGLE MEET</div>
+    <a href="#" style="display:inline-block;margin-top:12px;font-size:15px;letter-spacing:.5px;border-bottom:1px solid #00B3A9">{{ meetLink }}</a>
+    <div style="font-size:12px;color:rgba(255,255,255,.45);margin-top:12px;line-height:1.6">O link também está no convite enviado por e-mail. Se precisar remarcar, é só responder ao e-mail de confirmação.</div>
+  </div>
+  <button onClick="{{ recomecar }}" style="margin-top:36px;background:none;border:none;cursor:pointer;padding:0;font-family:'Montserrat',sans-serif;font-size:12px;letter-spacing:2px;font-weight:700;color:#00B3A9;border-bottom:1px solid #00B3A9;padding-bottom:2px" style-hover="color:#33cfc6">← AGENDAR OUTRO HORÁRIO</button>
+</div>
+</sc-if>
+
+<!-- ══ RODAPÉ ══ -->
+<div data-screen-label="Rodapé" style="border-top:1px solid rgba(255,255,255,.12);padding:32px 24px 44px">
+  <div style="max-width:640px;margin:0 auto;display:grid;gap:16px">
+    <div style="font-size:12px;color:rgba(255,255,255,.55);line-height:1.8">Prefere falar direto com a gente? <a href="https://wa.me/5516988037000" style="font-weight:600">WhatsApp 55 (16) 9 8803-7000</a> · <a href="mailto:contato@grgestaofinanceira.com.br" style="font-weight:600">contato@grgestaofinanceira.com.br</a></div>
+    <div style="font-size:11px;color:rgba(255,255,255,.35);line-height:1.8">Os dados fornecidos serão utilizados exclusivamente para contato comercial da GR Gestão Financeira, conforme a Lei Geral de Proteção de Dados (LGPD). Você pode solicitar a exclusão dos seus dados a qualquer momento.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;linkHome&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;#&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Navegação&quot;},&quot;simularErroDeReserva&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Estados de revisão&quot;},&quot;telaInicial&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;fluxo&quot;,&quot;sucesso&quot;],&quot;default&quot;:&quot;fluxo&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Estados de revisão&quot;}}">
+class Component extends DCLogic {
+  state = { nome: '', email: '', telefone: '', dia: null, hora: null, fase: null, erro: false, erroConsumido: false, tentou: false, bloqueados: {} };
+
+  cssToObj(css) {
+    const o = {};
+    css.split(';').forEach((d) => {
+      const ix = d.indexOf(':');
+      if (ix < 0) return;
+      const k = d.slice(0, ix).trim().replace(/-([a-z])/g, (m, c) => c.toUpperCase());
+      o[k] = d.slice(ix + 1).trim();
+    });
+    return o;
+  }
+
+  diasUteis() {
+    const dias = [];
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    while (dias.length < 14) {
+      if (d.getDay() !== 0 && d.getDay() !== 6) dias.push(new Date(d));
+      d.setDate(d.getDate() + 1);
+    }
+    return dias;
+  }
+
+  slotsBase() { return ['09:00', '09:45', '10:30', '11:15', '14:00', '14:45', '15:30', '16:15']; }
+
+  disponivel(diaIdx, slotIdx) {
+    if (diaIdx === 4) return false; // dia sem horários (demo do estado vazio)
+    return ((diaIdx * 3 + slotIdx * 5) % 7) !== 0;
+  }
+
+  renderVals() {
+    const s = this.state;
+    const fase = s.fase ?? ((this.props.telaInicial ?? 'fluxo') === 'sucesso' ? 'sucesso' : 'fluxo');
+    const datas = this.diasUteis();
+    const fmtDow = (dt) => dt.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').toUpperCase();
+    const fmtMes = (dt) => dt.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '').toUpperCase();
+    const fmtFull = (dt) => dt.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+    const fmtCurto = (dt) => dt.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '');
+
+    const diaBase = 'flex:0 0 74px;padding:14px 0 12px;text-align:center;cursor:pointer;border-radius:2px;font-family:Montserrat,sans-serif;transition:border-color .2s,background .2s;';
+    const dias = datas.map((dt, i) => ({
+      dow: fmtDow(dt), num: String(dt.getDate()).padStart(2, '0'), mes: fmtMes(dt),
+      pick: () => this.setState({ dia: i, hora: null, erro: false }),
+      style: this.cssToObj(diaBase + (s.dia === i
+        ? 'background:#00B3A9;border:1px solid #00B3A9;color:#00222f'
+        : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.15);color:#fff'))
+    }));
+
+    const bloq = s.bloqueados[s.dia] || [];
+    const horaBase = 'padding:14px 0;text-align:center;border-radius:2px;font-family:Montserrat,sans-serif;font-size:14px;font-weight:600;letter-spacing:1px;transition:border-color .2s,background .2s;';
+    const horarios = s.dia === null ? [] : this.slotsBase().map((h, j) => {
+      const disp = this.disponivel(s.dia, j) && !bloq.includes(h);
+      const sel = s.hora === h;
+      return {
+        label: h,
+        pick: disp ? () => this.setState({ hora: h, erro: false }) : () => {},
+        style: this.cssToObj(horaBase + (sel
+          ? 'background:#00B3A9;border:1px solid #00B3A9;color:#00222f;cursor:pointer'
+          : disp
+            ? 'background:transparent;border:1px solid rgba(255,255,255,.25);color:#fff;cursor:pointer'
+            : 'background:transparent;border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.25);cursor:default;text-decoration:line-through'))
+      };
+    });
+    const temHorarios = horarios.some((h) => !h.style.textDecoration);
+
+    const emailOk = /\S+@\S+\.\S+/.test(s.email);
+    const completo = s.nome.trim().length > 1 && emailOk && s.dia !== null && s.hora !== null;
+    const falta = [];
+    if (s.nome.trim().length < 2) falta.push('seu nome');
+    if (!emailOk) falta.push('um e-mail válido');
+    if (s.dia === null) falta.push('a data');
+    else if (s.hora === null) falta.push('o horário');
+
+    const btnBase = 'display:block;width:100%;border:none;font-family:Montserrat,sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;padding:19px;border-radius:2px;transition:background .2s;';
+    const btnConfirmarStyle = this.cssToObj(btnBase + (completo
+      ? 'background:#00B3A9;color:#00222f;cursor:pointer'
+      : 'background:rgba(255,255,255,.08);color:rgba(255,255,255,.35);cursor:not-allowed'));
+
+    const confirmar = () => {
+      if (!completo) { this.setState({ tentou: true }); return; }
+      if ((this.props.simularErroDeReserva ?? true) && !s.erroConsumido) {
+        const b = { ...s.bloqueados, [s.dia]: [...bloq, s.hora] };
+        this.setState({ erro: true, erroConsumido: true, hora: null, bloqueados: b });
+        return;
+      }
+      this.setState({ fase: 'sucesso', tentou: false });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const dtSel = s.dia !== null ? datas[s.dia] : datas[2];
+    return {
+      linkHome: this.props.linkHome ?? '#',
+      emFluxo: fase === 'fluxo',
+      emSucesso: fase === 'sucesso',
+      nome: s.nome, email: s.email, telefone: s.telefone,
+      setNome: (e) => this.setState({ nome: e.target.value }),
+      setEmail: (e) => this.setState({ email: e.target.value }),
+      setTelefone: (e) => this.setState({ telefone: e.target.value }),
+      dias,
+      diaEscolhido: s.dia !== null,
+      diaFull: s.dia !== null ? fmtFull(datas[s.dia]) : '',
+      horarios, temHorarios, semHorarios: !temHorarios,
+      erro: s.erro,
+      temResumo: s.dia !== null && s.hora !== null,
+      resumoCurto: s.dia !== null && s.hora !== null ? fmtCurto(datas[s.dia]) + ' · ' + s.hora : '',
+      btnConfirmarStyle, confirmar,
+      mostrarPendencias: s.tentou && !completo,
+      pendencias: 'Para confirmar, falta informar: ' + falta.join(', ') + '.',
+      emailResumo: emailOk ? s.email : 'seu e-mail',
+      sucessoData: fmtCurto(dtSel),
+      sucessoHora: s.hora ?? '09:45',
+      meetLink: 'meet.google.com/kdq-mvpz-hxe',
+      recomecar: () => this.setState({ fase: 'fluxo', dia: null, hora: null, erro: false, tentou: false })
+    };
+  }
+}
+</script>
+</body>
+</html>

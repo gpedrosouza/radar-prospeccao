@@ -1,0 +1,88 @@
+# =============================================================================
+# Radar Prospecção — CI/CD Pipeline
+#
+# Triggers:
+#   - Qualquer PR para main: roda job 'test' (CI gate)
+#   - Push para main: roda o job test (build e deploy ficam no repo privado)
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Job 1 — test
+  # Roda em todos os PRs e em pushes para main.
+  # ─────────────────────────────────────────────────────────────────────────────
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: radar_ci
+          POSTGRES_PASSWORD: radar_ci_pass
+          POSTGRES_DB: radar_ci_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    env:
+      DATABASE_URL: postgresql://radar_ci:radar_ci_pass@localhost:5432/radar_ci_db?schema=public
+      REDIS_URL: redis://localhost:6379
+      AUTH_SECRET: ci-test-secret-do-not-use-in-production
+      AUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      SEED_ADMIN_EMAIL: admin@ci.test
+      SEED_ADMIN_PASSWORD: ci-admin-senha-teste
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run db:generate --workspace=packages/db
+
+      - name: Apply migrations
+        run: npm run db:deploy --workspace=packages/db
+
+      - name: Seed admin user (necessário para testes de integração de auth)
+        run: npm run seed --workspace=packages/db
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test --workspace=apps/web -- --run
+

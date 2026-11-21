@@ -1,0 +1,50 @@
+{
+  "name": "@radar/workers",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "import:receita": "tsx --env-file=.env src/scripts/import-receita/index.ts",
+    "db:analyze": "tsx --env-file=.env src/scripts/analyze-cnpj.ts",
+    "analytics:refresh": "tsx --env-file=.env src/scripts/analytics/refresh.ts",
+    "geocode:cnpj": "tsx --env-file=.env src/scripts/geocode-cnpj.ts",
+    "import:cnefe": "tsx --env-file=.env src/scripts/import-cnefe.ts",
+    "import:cnefe-ceps": "tsx --env-file=.env src/scripts/import-cnefe-ceps.ts",
+    "reenrich:municipio-level": "tsx --env-file=.env src/scripts/reenrich-municipio-level.ts",
+    "backfill:cnefe": "tsx --env-file=.env src/scripts/backfill-cnefe.ts",
+    "import:cities": "tsx --env-file=.env src/scripts/import-cities.ts",
+    "match:municipio-codigo-rf": "tsx --env-file=.env src/scripts/match-municipio-codigo-rf.ts",
+    "test:queue": "tsx --env-file=.env src/scripts/test-export-queue.ts",
+    "test:sse": "tsx --env-file=.env src/scripts/test-sse-stream.ts",
+    "cleanup:places-cache": "tsx --env-file=.env src/scripts/cleanup-places-cache.ts",
+    "seed:test-emails": "tsx --env-file=.env src/scripts/seed-test-emails.ts",
+    "backup": "tsx --env-file=.env src/scripts/backup-postgres.ts",
+    "restore": "tsx --env-file=.env src/scripts/restore-postgres.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.0.0",
+    "@aws-sdk/lib-storage": "^3.0.0",
+    "@aws-sdk/s3-request-presigner": "^3.0.0",
+    "@radar/db": "*",
+    "@radar/shared": "*",
+    "bullmq": "^5.0.0",
+    "csv-parse": "^5.5.6",
+    "csv-stringify": "^6.0.0",
+    "iconv-lite": "^0.6.3",
+    "ioredis": "^5.0.0",
+    "pg": "^8.13.3",
+    "pg-copy-streams": "^6.0.6",
+    "resend": "^4.8.0",
+    "yauzl": "^3.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.11.10",
+    "@types/pg-copy-streams": "^1.2.3",
+    "@types/yauzl": "^2.10.3",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}

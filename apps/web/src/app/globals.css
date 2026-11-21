@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* GR brand palette */
+  --gr-navy: #0f2040;
+  --gr-navy-light: #162a52;
+  --gr-teal: #00bfa5;
+  --gr-teal-dark: #009e88;
+
+  /* Light theme neutrals */
+  --bg: #f5f7fa;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+
+  /* Typography */
+  --text: #1a202c;
+  --text-2: #4a5568;
+  --text-muted: #94a3b8;
+
+  /* Status */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+
+  /* Layout */
+  --sidebar-w: 232px;
+}
+
+/* Fade+slide-up de entrada — usado pela página pública /agende
+   (apps/web/src/components/agendamento/), espelha o design de referência. */
+@keyframes grFade {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-montserrat), var(--font-inter), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  .sidebar-w {
+    width: var(--sidebar-w);
+  }
+
+  .ml-sidebar {
+    margin-left: var(--sidebar-w);
+  }
+}
+
+/* Landing institucional (GR Gestão Financeira) */
+.gr-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
+.gr-reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gr-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

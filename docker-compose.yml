@@ -1,0 +1,131 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: radar_postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Tuning para ~66M registros: shared_buffers ~25% da RAM disponível,
+    # work_mem conservador para evitar OOM em queries paralelas (work_mem × max_connections).
+    shm_size: "2gb"
+    command: >
+      postgres
+      -c shared_buffers=2GB
+      -c effective_cache_size=6GB
+      -c work_mem=64MB
+      -c maintenance_work_mem=512MB
+      -c max_parallel_workers_per_gather=4
+      -c max_parallel_workers=4
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=64MB
+      -c random_page_cost=1.1
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -U $POSTGRES_USER -d $POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: radar_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    # appendonly yes: garante persistência do Redis mesmo após restart
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  worker-export:
+    build:
+      context: .
+      dockerfile: apps/workers/Dockerfile
+    container_name: radar_worker_export
+    env_file:
+      - .env
+    environment:
+      # Dentro da rede Docker, usa o nome do serviço — não localhost
+      - DATABASE_URL=postgresql://radar:radar_dev_password@postgres:5432/radar_db?schema=public
+      - REDIS_URL=redis://redis:6379
+      # R2 desativado em dev: variáveis vazias fazem isR2Available() retornar false
+      # → csv-exporter usa armazenamento local em /app/exports (montado abaixo).
+      # Para produção, preencha com credenciais reais do Cloudflare R2.
+      - R2_ENDPOINT=
+      - R2_ACCESS_KEY_ID=
+      - R2_SECRET_ACCESS_KEY=
+      - R2_BUCKET=
+    volumes:
+      # Exportações locais: o worker grava em /app/exports; o host lê via ./exports/
+      - ./exports:/app/exports
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # MinIO — compatível com S3, substitui Cloudflare R2 em desenvolvimento local.
+  # Console em http://localhost:9001  (user: minioadmin / minioadmin)
+  minio:
+    image: minio/minio
+    container_name: radar_minio
+    restart: unless-stopped
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Cria o bucket radar-exports no MinIO ao subir (one-shot, sai após criar).
+  minio-init:
+    image: minio/mc
+    container_name: radar_minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 minioadmin minioadmin;
+        mc mb --ignore-existing local/radar-exports;
+        mc mb --ignore-existing local/radar-backups;
+        echo '[minio-init] buckets radar-exports e radar-backups prontos';
+      "
+    restart: "no"
+
+  # web:
+  #   build:
+  #     context: apps/web
+  #     dockerfile: Dockerfile   # ainda não existe — será criado quando o app tiver features
+  #   container_name: radar_web
+  #   env_file:
+  #     - .env
+  #   ports:
+  #     - "${WEB_PORT:-3000}:3000"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

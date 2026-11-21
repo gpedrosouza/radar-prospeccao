@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+html{scroll-behavior:smooth}
+body{margin:0;background:#00222f;font-family:'Montserrat',sans-serif;color:#f4f6f8}
+a{color:#00B3A9;text-decoration:none}
+a:hover{color:#33cfc6}
+input,select{font-family:'Montserrat',sans-serif}
+input[type=range]{accent-color:#00B3A9}
+@keyframes grFade{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+
+<!-- ══ NAV ══ -->
+<div style="position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:18px 48px;background:rgba(0,34,47,.85);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.08)" data-screen-label="Nav">
+  <a href="#topo" style="display:flex;align-items:center;gap:12px">
+    <img src="assets/logo.png" alt="GR" style="height:34px;filter:invert(1)">
+    <span style="font-size:10px;letter-spacing:4px;color:rgba(255,255,255,.55);font-weight:300">GESTÃO FINANCEIRA</span>
+  </a>
+  <div style="display:flex;align-items:center;gap:32px">
+    <a href="#produtos" style="font-size:12px;letter-spacing:1.5px;color:rgba(255,255,255,.75);font-weight:500" style-hover="color:#00B3A9">PRODUTOS</a>
+    <a href="#fidc" style="font-size:12px;letter-spacing:1.5px;color:rgba(255,255,255,.75);font-weight:500" style-hover="color:#00B3A9">FIDC</a>
+    <a href="#simulador" style="font-size:12px;letter-spacing:1.5px;color:rgba(255,255,255,.75);font-weight:500" style-hover="color:#00B3A9">SIMULADOR</a>
+    <a href="#faq" style="font-size:12px;letter-spacing:1.5px;color:rgba(255,255,255,.75);font-weight:500" style-hover="color:#00B3A9">FAQ</a>
+    <a href="{{ linkAgenda }}" style="font-size:12px;letter-spacing:2px;font-weight:700;background:#00B3A9;color:#00222f;padding:12px 24px;border-radius:2px" style-hover="background:#33cfc6;color:#00222f">AGENDAR REUNIÃO</a>
+  </div>
+</div>
+
+<!-- ══ HERO ══ -->
+<div id="topo" data-screen-label="Hero" style="position:relative;overflow:hidden;padding:120px 48px 100px;background:linear-gradient(160deg,#003650 0%,#00222f 70%)">
+  <div style="position:absolute;bottom:-80px;left:-60px;width:520px;height:420px;clip-path:polygon(0 100%,0 15%,100% 100%);background:rgba(0,179,169,.08)"></div>
+  <div style="position:absolute;top:0;right:0;width:380px;height:300px;clip-path:polygon(100% 0,20% 0,100% 100%);background:rgba(0,179,169,.06)"></div>
+  <div style="position:relative;max-width:1100px;margin:0 auto;animation:grFade .8s ease both">
+    <div style="font-size:11px;letter-spacing:5px;color:#00B3A9;font-weight:700;margin-bottom:28px">FIDC · CRÉDITO · GESTÃO</div>
+    <h1 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:76px;line-height:1.08;letter-spacing:-1px;color:#fff;max-width:900px">Sua empresa com <em style="color:#00B3A9">liquidez financeira</em> para operar e crescer.</h1>
+    <p style="margin:32px 0 0;font-size:17px;line-height:1.8;color:rgba(255,255,255,.65);max-width:560px;font-weight:300">Soluções de crédito estruturado para empresas e pessoas físicas — com atendimento consultivo, agilidade e operações sob medida.</p>
+    <div style="display:flex;gap:16px;margin-top:44px">
+      <a href="#simulador" style="background:#00B3A9;color:#00222f;font-size:13px;font-weight:700;letter-spacing:2px;padding:18px 36px;border-radius:2px" style-hover="background:#33cfc6;color:#00222f">SIMULAR PARA MEU NEGÓCIO</a>
+      <a href="{{ linkAgenda }}" style="border:1px solid rgba(255,255,255,.3);color:#fff;font-size:13px;font-weight:600;letter-spacing:2px;padding:18px 36px;border-radius:2px" style-hover="border-color:#00B3A9;color:#00B3A9">AGENDAR REUNIÃO</a>
+    </div>
+  </div>
+  <div style="position:relative;max-width:1100px;margin:90px auto 0;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.1)">
+    <div style="background:#00222f;padding:28px 32px"><div style="font-family:'Instrument Serif',serif;font-size:34px;color:#fff">Sem IOF</div><div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:6px;line-height:1.6">Operações de crédito via FIDC sem incidência de IOF</div></div>
+    <div style="background:#00222f;padding:28px 32px"><div style="font-family:'Instrument Serif',serif;font-size:34px;color:#fff">Fora do Sisbacen</div><div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:6px;line-height:1.6">Operações não registradas no sistema do Banco Central</div></div>
+    <div style="background:#00222f;padding:28px 32px"><div style="font-family:'Instrument Serif',serif;font-size:34px;color:#fff">Sob medida</div><div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:6px;line-height:1.6">Estruturação de operações para o perfil da sua empresa</div></div>
+  </div>
+</div>
+
+<!-- ══ SOBRE ══ -->
+<div data-screen-label="Sobre" style="display:grid;grid-template-columns:1fr 1.2fr;gap:80px;max-width:1100px;margin:0 auto;padding:110px 48px;align-items:start">
+  <div>
+    <div style="font-size:11px;letter-spacing:4px;color:#00B3A9;font-weight:700">QUEM SOMOS</div>
+    <div style="width:48px;height:2px;background:#00B3A9;margin:20px 0 28px"></div>
+    <h2 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:42px;line-height:1.15;color:#fff">Atendimento consultivo, soluções além dos números.</h2>
+  </div>
+  <div style="font-size:15px;line-height:1.9;color:rgba(255,255,255,.68);font-weight:300">
+    <p style="margin:0 0 18px">A GR Gestão Financeira é um escritório especializado em soluções financeiras personalizadas para empresas e pessoas que buscam crescer com segurança, liquidez e eficiência.</p>
+    <p style="margin:0 0 18px">Sob a liderança de <strong style="color:#fff;font-weight:600">Alexander Ciarlo</strong>, profissional com ampla experiência no mercado financeiro, a GR se destaca pela capacidade de entender as necessidades reais de cada cliente — propondo soluções que vão além dos números.</p>
+    <p style="margin:0">Nosso compromisso é acompanhar cada etapa da jornada financeira, construindo juntos um caminho sólido para o sucesso.</p>
+  </div>
+</div>
+
+<!-- ══ PRODUTOS ══ -->
+<div id="produtos" data-screen-label="Produtos" style="background:#f4f6f8;color:#00222f;padding:110px 48px">
+  <div style="max-width:1100px;margin:0 auto">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:24px">
+      <div>
+        <div style="font-size:11px;letter-spacing:4px;color:#008f87;font-weight:700">NOSSOS PRODUTOS</div>
+        <div style="width:48px;height:2px;background:#00B3A9;margin:20px 0 28px"></div>
+        <h2 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:46px;line-height:1.1;color:#003650">O que sua empresa<br>precisa hoje?</h2>
+      </div>
+      <div style="display:flex;gap:8px;background:#fff;padding:6px;border-radius:2px;border:1px solid rgba(0,54,80,.12)">
+        <button onClick="{{ verPJ }}" style="{{ tabPJStyle }}">EMPRESAS · PJ</button>
+        <button onClick="{{ verPF }}" style="{{ tabPFStyle }}">PESSOA FÍSICA</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:48px">
+      <sc-for list="{{ produtos }}" as="p" hint-placeholder-count="6">
+        <div style="background:#fff;border:1px solid rgba(0,54,80,.1);padding:32px 28px;border-top:3px solid #00B3A9;transition:transform .2s,box-shadow .2s" style-hover="transform:translateY(-4px);box-shadow:0 12px 30px rgba(0,54,80,.12)">
+          <div style="font-size:14px;font-weight:700;letter-spacing:1px;color:#003650;text-transform:uppercase">{{ p.nome }}</div>
+          <div style="font-size:13px;line-height:1.7;color:#556;margin-top:12px">{{ p.desc }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</div>
+
+<!-- ══ FIDC ══ -->
+<div id="fidc" data-screen-label="FIDC" style="background:#003650;padding:110px 48px">
+  <div style="max-width:1100px;margin:0 auto">
+    <div style="font-size:11px;letter-spacing:4px;color:#00B3A9;font-weight:700">FIDC · CARRO-CHEFE</div>
+    <div style="width:48px;height:2px;background:#00B3A9;margin:20px 0 28px"></div>
+    <h2 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:46px;line-height:1.12;color:#fff;max-width:640px">Crédito estruturado via FIDC para gerar caixa imediato.</h2>
+    <p style="margin:24px 0 0;font-size:15px;line-height:1.8;color:rgba(255,255,255,.6);max-width:560px;font-weight:300">Antecipação de recebíveis e operações estruturadas com flexibilidade, agilidade e taxas competitivas frente ao mercado.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.12);margin-top:56px">
+      <div style="background:#003650;padding:36px 32px"><div style="font-family:'Instrument Serif',serif;font-size:24px;color:#00B3A9">Cessão com direito de regresso</div><div style="font-size:13px;line-height:1.7;color:rgba(255,255,255,.65);margin-top:12px">Operação tradicional de desconto de títulos. Em caso de inadimplência, o cedente realiza a recompra. Liquidez rápida com estrutura conhecida.</div></div>
+      <div style="background:#003650;padding:36px 32px"><div style="font-family:'Instrument Serif',serif;font-size:24px;color:#00B3A9">Cessão sem direito de regresso</div><div style="font-size:13px;line-height:1.7;color:rgba(255,255,255,.65);margin-top:12px">Produto pouco praticado por bancos: em caso de inadimplência do sacado, o cedente não é obrigado a recomprar o título — salvo vícios.</div></div>
+      <div style="background:#003650;padding:36px 32px"><div style="font-family:'Instrument Serif',serif;font-size:24px;color:#00B3A9">Operações de risco sacado</div><div style="font-size:13px;line-height:1.7;color:rgba(255,255,255,.65);margin-top:12px">O risco de crédito é do pagador. Limite aberto para o sacado âncora, que oferece prazos estendidos a fornecedores e antecipação de recebíveis.</div></div>
+      <div style="background:#003650;padding:36px 32px"><div style="font-family:'Instrument Serif',serif;font-size:24px;color:#00B3A9">Capital de giro para produção</div><div style="font-size:13px;line-height:1.7;color:rgba(255,255,255,.65);margin-top:12px">Pagamento à vista ao fornecedor com prazo estendido para sua empresa. Competitividade e preços especiais na compra de insumos.</div></div>
+      <div style="background:#003650;padding:36px 32px"><div style="font-family:'Instrument Serif',serif;font-size:24px;color:#00B3A9">Serviços de Trustee</div><div style="font-size:13px;line-height:1.7;color:rgba(255,255,255,.65);margin-top:12px">Gestão e administração dos fluxos de recebimentos e pagamentos. Mais controle, transparência e previsibilidade para o caixa.</div></div>
+      <div style="background:#003650;padding:36px 32px"><div style="font-family:'Instrument Serif',serif;font-size:24px;color:#00B3A9">Consultoria e gestão financeira</div><div style="font-size:13px;line-height:1.7;color:rgba(255,255,255,.65);margin-top:12px">Projetos de reestruturação e melhoria de desempenho financeiro, com foco em resultados concretos e crescimento sustentável.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ COMO FUNCIONA ══ -->
+<div data-screen-label="Como funciona" style="max-width:1100px;margin:0 auto;padding:110px 48px">
+  <div style="font-size:11px;letter-spacing:4px;color:#00B3A9;font-weight:700">COMO FUNCIONA</div>
+  <div style="width:48px;height:2px;background:#00B3A9;margin:20px 0 28px"></div>
+  <h2 style="margin:0 0 56px;font-family:'Instrument Serif',serif;font-weight:400;font-size:42px;color:#fff">Do primeiro contato à liquidez, em 4 passos.</h2>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:32px">
+    <div><div style="font-family:'Instrument Serif',serif;font-size:52px;color:rgba(0,179,169,.5)">01</div><div style="font-size:15px;font-weight:700;color:#fff;margin:10px 0 8px">Simulação ou reunião</div><div style="font-size:13px;line-height:1.7;color:rgba(255,255,255,.55)">Você simula online ou agenda uma conversa para entendermos sua necessidade.</div></div>
+    <div><div style="font-family:'Instrument Serif',serif;font-size:52px;color:rgba(0,179,169,.5)">02</div><div style="font-size:15px;font-weight:700;color:#fff;margin:10px 0 8px">Diagnóstico consultivo</div><div style="font-size:13px;line-height:1.7;color:rgba(255,255,255,.55)">Analisamos fluxo de caixa, recebíveis e objetivos antes de propor qualquer solução.</div></div>
+    <div><div style="font-family:'Instrument Serif',serif;font-size:52px;color:rgba(0,179,169,.5)">03</div><div style="font-size:15px;font-weight:700;color:#fff;margin:10px 0 8px">Estruturação sob medida</div><div style="font-size:13px;line-height:1.7;color:rgba(255,255,255,.55)">Desenhamos a operação ideal — FIDC, crédito ou gestão — com condições competitivas.</div></div>
+    <div><div style="font-family:'Instrument Serif',serif;font-size:52px;color:rgba(0,179,169,.5)">04</div><div style="font-size:15px;font-weight:700;color:#fff;margin:10px 0 8px">Acompanhamento contínuo</div><div style="font-size:13px;line-height:1.7;color:rgba(255,255,255,.55)">Seguimos ao seu lado em cada etapa da jornada financeira da empresa.</div></div>
+  </div>
+</div>
+
+<!-- ══ SIMULADOR ══ -->
+<div id="simulador" data-screen-label="Simulador" style="background:linear-gradient(160deg,#00435f,#00222f);padding:110px 48px">
+  <div style="max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1.1fr;gap:72px;align-items:start">
+    <div>
+      <div style="font-size:11px;letter-spacing:4px;color:#00B3A9;font-weight:700">SIMULADOR</div>
+      <div style="width:48px;height:2px;background:#00B3A9;margin:20px 0 28px"></div>
+      <h2 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:46px;line-height:1.12;color:#fff">Simule agora para o seu negócio.</h2>
+      <p style="margin:24px 0 0;font-size:15px;line-height:1.8;color:rgba(255,255,255,.6);font-weight:300">Estimativa instantânea, sem compromisso. Os valores finais dependem de análise de crédito e da estrutura da operação.</p>
+      <div style="margin-top:36px;padding:24px 28px;border:1px solid rgba(0,179,169,.3);background:rgba(0,179,169,.06)">
+        <div style="font-size:13px;font-weight:700;color:#00B3A9;letter-spacing:1px">PREFERE CONVERSAR?</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.65);line-height:1.7;margin-top:8px">Agende uma reunião com um assessor e receba um diagnóstico consultivo gratuito.</div>
+        <a href="{{ linkAgenda }}" style="display:inline-block;margin-top:16px;font-size:12px;font-weight:700;letter-spacing:2px;color:#00B3A9;border-bottom:1px solid #00B3A9" style-hover="color:#33cfc6">AGENDAR REUNIÃO →</a>
+      </div>
+    </div>
+    <div style="background:#f4f6f8;color:#00222f;padding:44px 40px;border-radius:2px">
+      <div style="display:flex;gap:8px">
+        <button onClick="{{ simPJ }}" style="{{ simTabPJStyle }}">EMPRESA · PJ</button>
+        <button onClick="{{ simPF }}" style="{{ simTabPFStyle }}">PESSOA FÍSICA</button>
+      </div>
+      <div style="margin-top:32px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;letter-spacing:1px;color:#003650"><span>{{ labelValor }}</span><span style="color:#008f87">{{ valorFmt }}</span></div>
+        <input type="range" min="50000" max="5000000" step="50000" value="{{ simValor }}" onChange="{{ setValor }}" style="width:100%;margin-top:12px">
+      </div>
+      <div style="margin-top:28px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;letter-spacing:1px;color:#003650"><span>PRAZO</span><span style="color:#008f87">{{ prazoFmt }}</span></div>
+        <input type="range" min="1" max="36" step="1" value="{{ simPrazo }}" onChange="{{ setPrazo }}" style="width:100%;margin-top:12px">
+      </div>
+      <div style="margin-top:36px;border-top:1px solid rgba(0,54,80,.12);padding-top:28px;display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div><div style="font-size:11px;letter-spacing:2px;color:#667;font-weight:600">{{ labelResultado }}</div><div style="font-family:'Instrument Serif',serif;font-size:36px;color:#003650;margin-top:6px">{{ resultadoFmt }}</div></div>
+        <div><div style="font-size:11px;letter-spacing:2px;color:#667;font-weight:600">TAXA ESTIMADA</div><div style="font-family:'Instrument Serif',serif;font-size:36px;color:#003650;margin-top:6px">{{ taxaFmt }}</div></div>
+      </div>
+      <a href="{{ linkAgenda }}" style="display:block;text-align:center;margin-top:32px;background:#003650;color:#fff;font-size:13px;font-weight:700;letter-spacing:2px;padding:18px" style-hover="background:#00B3A9;color:#00222f">QUERO ESSA CONDIÇÃO →</a>
+      <div style="font-size:11px;color:#899;line-height:1.6;margin-top:16px">* Estimativa ilustrativa. Condições finais sujeitas a análise de crédito e à estrutura da operação.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SEGMENTOS ══ -->
+<div data-screen-label="Segmentos" style="max-width:1100px;margin:0 auto;padding:110px 48px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:center">
+    <div>
+      <div style="font-size:11px;letter-spacing:4px;color:#00B3A9;font-weight:700">ATUAÇÃO</div>
+      <div style="width:48px;height:2px;background:#00B3A9;margin:20px 0 28px"></div>
+      <h2 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:42px;line-height:1.15;color:#fff">Soluções GR para todos os segmentos.</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.12)">
+      <div style="background:#00222f;padding:32px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:22px;color:#fff">Agronegócio</div></div>
+      <div style="background:#00222f;padding:32px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:22px;color:#fff">Indústria</div></div>
+      <div style="background:#00222f;padding:32px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:22px;color:#fff">Comércio</div></div>
+      <div style="background:#00222f;padding:32px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:22px;color:#fff">Serviços</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DEPOIMENTOS ══ -->
+<div data-screen-label="Depoimentos" style="background:#f4f6f8;color:#00222f;padding:110px 48px">
+  <div style="max-width:1100px;margin:0 auto">
+    <div style="font-size:11px;letter-spacing:4px;color:#008f87;font-weight:700">QUEM CONFIA</div>
+    <div style="width:48px;height:2px;background:#00B3A9;margin:20px 0 48px"></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
+      <div style="background:#fff;border:1px solid rgba(0,54,80,.1);padding:36px 32px"><div style="font-family:'Instrument Serif',serif;font-size:30px;color:#00B3A9">"</div><div style="font-size:14px;line-height:1.8;color:#445;font-style:italic">[Depoimento de cliente — indústria. Substitua por um caso real com resultado concreto.]</div><div style="margin-top:20px;font-size:12px;font-weight:700;letter-spacing:1px;color:#003650">NOME · EMPRESA</div></div>
+      <div style="background:#fff;border:1px solid rgba(0,54,80,.1);padding:36px 32px"><div style="font-family:'Instrument Serif',serif;font-size:30px;color:#00B3A9">"</div><div style="font-size:14px;line-height:1.8;color:#445;font-style:italic">[Depoimento de cliente — agronegócio. Substitua por um caso real com resultado concreto.]</div><div style="margin-top:20px;font-size:12px;font-weight:700;letter-spacing:1px;color:#003650">NOME · EMPRESA</div></div>
+      <div style="background:#fff;border:1px solid rgba(0,54,80,.1);padding:36px 32px"><div style="font-family:'Instrument Serif',serif;font-size:30px;color:#00B3A9">"</div><div style="font-size:14px;line-height:1.8;color:#445;font-style:italic">[Depoimento de cliente — serviços. Substitua por um caso real com resultado concreto.]</div><div style="margin-top:20px;font-size:12px;font-weight:700;letter-spacing:1px;color:#003650">NOME · EMPRESA</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ FAQ ══ -->
+<div id="faq" data-screen-label="FAQ" style="max-width:860px;margin:0 auto;padding:110px 48px">
+  <div style="font-size:11px;letter-spacing:4px;color:#00B3A9;font-weight:700">PERGUNTAS FREQUENTES</div>
+  <div style="width:48px;height:2px;background:#00B3A9;margin:20px 0 40px"></div>
+  <sc-for list="{{ faqs }}" as="f" hint-placeholder-count="5">
+    <div style="border-bottom:1px solid rgba(255,255,255,.12)">
+      <button onClick="{{ f.toggle }}" style="width:100%;display:flex;justify-content:space-between;align-items:center;gap:24px;background:none;border:none;cursor:pointer;padding:24px 0;text-align:left">
+        <span style="font-size:16px;font-weight:600;color:#fff;font-family:'Montserrat',sans-serif">{{ f.q }}</span>
+        <span style="font-family:'Instrument Serif',serif;font-size:26px;color:#00B3A9;flex-shrink:0">{{ f.icon }}</span>
+      </button>
+      <sc-if value="{{ f.aberta }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:14px;line-height:1.8;color:rgba(255,255,255,.6);padding:0 40px 24px 0;font-weight:300">{{ f.a }}</div>
+      </sc-if>
+    </div>
+  </sc-for>
+</div>
+
+<!-- ══ CTA FINAL + FOOTER ══ -->
+<div data-screen-label="CTA final" style="background:linear-gradient(135deg,#003650,#001f2e);padding:110px 48px 0">
+  <div style="max-width:1100px;margin:0 auto;text-align:center">
+    <img src="assets/logo.png" alt="GR" style="height:56px;filter:invert(1)">
+    <h2 style="margin:32px auto 0;font-family:'Instrument Serif',serif;font-weight:400;font-size:52px;line-height:1.12;color:#fff;max-width:700px">Vamos construir a liquidez do seu negócio?</h2>
+    <div style="display:flex;gap:16px;justify-content:center;margin-top:40px">
+      <a href="#simulador" style="background:#00B3A9;color:#00222f;font-size:13px;font-weight:700;letter-spacing:2px;padding:18px 36px;border-radius:2px" style-hover="background:#33cfc6;color:#00222f">FAZER SIMULAÇÃO</a>
+      <a href="{{ linkAgenda }}" style="border:1px solid rgba(255,255,255,.3);color:#fff;font-size:13px;font-weight:600;letter-spacing:2px;padding:18px 36px;border-radius:2px" style-hover="border-color:#00B3A9;color:#00B3A9">AGENDAR REUNIÃO</a>
+    </div>
+  </div>
+  <div style="max-width:1100px;margin:90px auto 0;border-top:1px solid rgba(255,255,255,.12);padding:32px 0;display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;font-size:12px;color:rgba(255,255,255,.45)">
+    <div><strong style="color:rgba(255,255,255,.7)">Alexander Ciarlo</strong> · Gestor Financeiro · 55 (16) 9 8803-7000</div>
+    <div>Rua São Pio X, 343 - Sala 21, Vila Prado - São Carlos/SP</div>
+    <div>www.grgestaofinanceira.com.br</div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;linkAgenda&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;#simulador&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Contato&quot;},&quot;taxaMensalPJ&quot;:{&quot;editor&quot;:&quot;float&quot;,&quot;default&quot;:1.6,&quot;min&quot;:0.5,&quot;max&quot;:5,&quot;step&quot;:0.1,&quot;unit&quot;:&quot;% a.m.&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulador&quot;},&quot;taxaMensalPF&quot;:{&quot;editor&quot;:&quot;float&quot;,&quot;default&quot;:2.1,&quot;min&quot;:0.5,&quot;max&quot;:6,&quot;step&quot;:0.1,&quot;unit&quot;:&quot;% a.m.&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulador&quot;}}">
+class Component extends DCLogic {
+  state = { tab: 'pj', simTab: 'pj', simValor: 500000, simPrazo: 12, faqAberta: 0 };
+
+  renderVals() {
+    const s = this.state;
+    const linkAgenda = this.props.linkAgenda ?? '#simulador';
+    const taxaPJ = this.props.taxaMensalPJ ?? 1.6;
+    const taxaPF = this.props.taxaMensalPF ?? 2.1;
+
+    const produtosPJ = [
+      { nome: 'Crédito Empresarial', desc: 'Capital para giro, expansão e novos projetos, com estrutura adequada ao fluxo de caixa da empresa.' },
+      { nome: 'Home Equity', desc: 'Crédito com garantia de imóvel: taxas menores e prazos longos para destravar grandes projetos.' },
+      { nome: 'Consórcios', desc: 'Planejamento de aquisição de bens e imóveis sem juros, com parcelas que cabem no orçamento.' },
+      { nome: 'Auto Equity', desc: 'Crédito com garantia de veículo — liquidez rápida sem abrir mão do bem.' },
+      { nome: 'Financiamento de Veículos', desc: 'Renovação e ampliação de frota com condições competitivas.' },
+      { nome: 'Seguros', desc: 'Proteção patrimonial e operacional para o negócio e seus sócios.' }
+    ];
+    const produtosPF = [
+      { nome: 'Crédito Imobiliário', desc: 'Financiamento para aquisição do seu imóvel com as melhores condições do mercado.' },
+      { nome: 'Home Equity', desc: 'Use seu imóvel como garantia e acesse crédito com taxas reduzidas e prazos longos.' },
+      { nome: 'Consórcios', desc: 'Conquiste bens e imóveis sem juros, com planejamento e disciplina.' },
+      { nome: 'Auto Equity', desc: 'Crédito com garantia de veículo, sem precisar vendê-lo.' },
+      { nome: 'Financiamento de Veículos', desc: 'Seu carro novo ou seminovo com parcelas ajustadas à sua renda.' },
+      { nome: 'Empréstimo Consignado', desc: 'Crédito com desconto em folha e as menores taxas do mercado.' },
+      { nome: 'Seguros e Previdência', desc: 'Proteção para você e sua família, hoje e no futuro.' },
+      { nome: 'Mercado de Energia', desc: 'Economia na conta de luz via mercado livre de energia.' }
+    ];
+
+    const taxa = s.simTab === 'pj' ? taxaPJ : taxaPF;
+    const i = taxa / 100;
+    const n = s.simPrazo;
+    const v = s.simValor;
+    let resultado, labelResultado;
+    if (s.simTab === 'pj') {
+      // antecipação: valor líquido estimado após deságio simples
+      resultado = v * (1 - i * n * 0.5) ; // deságio médio sobre prazo médio
+      labelResultado = 'VALOR LÍQUIDO ESTIMADO';
+    } else {
+      resultado = v * (i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1);
+      labelResultado = 'PARCELA ESTIMADA';
+    }
+    const fmt = (x) => x.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+
+    const faqData = [
+      { q: 'O que é um FIDC e por que ele é vantajoso?', a: 'O FIDC (Fundo de Investimento em Direitos Creditórios) é um veículo regulado que compra recebíveis de empresas, antecipando caixa. Por não ser uma operação bancária tradicional, não há incidência de IOF e a operação não é registrada no Sisbacen — com flexibilidade e taxas competitivas.' },
+      { q: 'Minha empresa precisa ter um faturamento mínimo?', a: 'Cada operação é analisada individualmente. O mais importante é a qualidade dos recebíveis e a saúde da carteira de sacados. Agende uma conversa e faremos um diagnóstico sem compromisso.' },
+      { q: 'Qual a diferença entre cessão com e sem regresso?', a: 'Na cessão com regresso, se o sacado não pagar, sua empresa recompra o título. Na cessão sem regresso, o risco de inadimplência do sacado é do fundo — sua empresa não é obrigada a recomprar, salvo em caso de vícios no título.' },
+      { q: 'A simulação gera algum compromisso?', a: 'Não. A simulação é uma estimativa ilustrativa e gratuita. As condições finais dependem de análise de crédito e da estrutura da operação.' },
+      { q: 'Quanto tempo leva para a operação gerar caixa?', a: 'Após a aprovação e formalização, a antecipação de recebíveis costuma gerar liquidez em poucos dias úteis. A agilidade é um dos nossos principais diferenciais frente aos bancos.' }
+    ];
+    const faqs = faqData.map((f, idx) => ({
+      q: f.q, a: f.a,
+      aberta: s.faqAberta === idx,
+      icon: s.faqAberta === idx ? '−' : '+',
+      toggle: () => this.setState({ faqAberta: s.faqAberta === idx ? -1 : idx })
+    }));
+
+    const tabBase = 'font-family:Montserrat;font-size:11px;font-weight:700;letter-spacing:1.5px;padding:12px 20px;border:none;cursor:pointer;border-radius:2px;';
+    const tabStyle = (on) => this.cssToObj(tabBase + (on ? 'background:#003650;color:#fff' : 'background:transparent;color:#667'));
+
+    return {
+      linkAgenda,
+      produtos: s.tab === 'pj' ? produtosPJ : produtosPF,
+      verPJ: () => this.setState({ tab: 'pj' }),
+      verPF: () => this.setState({ tab: 'pf' }),
+      tabPJStyle: tabStyle(s.tab === 'pj'),
+      tabPFStyle: tabStyle(s.tab === 'pf'),
+      simPJ: () => this.setState({ simTab: 'pj' }),
+      simPF: () => this.setState({ simTab: 'pf' }),
+      simTabPJStyle: tabStyle(s.simTab === 'pj'),
+      simTabPFStyle: tabStyle(s.simTab === 'pf'),
+      simValor: s.simValor,
+      simPrazo: s.simPrazo,
+      setValor: (e) => this.setState({ simValor: +e.target.value }),
+      setPrazo: (e) => this.setState({ simPrazo: +e.target.value }),
+      labelValor: s.simTab === 'pj' ? 'VALOR EM RECEBÍVEIS' : 'VALOR DO CRÉDITO',
+      valorFmt: fmt(v),
+      prazoFmt: n + (n === 1 ? ' mês' : ' meses'),
+      labelResultado,
+      resultadoFmt: fmt(Math.max(0, resultado)),
+      taxaFmt: taxa.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + '% a.m.',
+      faqs
+    };
+  }
+
+  cssToObj(css) {
+    const o = {};
+    css.split(';').forEach((d) => {
+      const ix = d.indexOf(':');
+      if (ix < 0) return;
+      const k = d.slice(0, ix).trim().replace(/-([a-z])/g, (m, c) => c.toUpperCase());
+      o[k] = d.slice(ix + 1).trim();
+    });
+    return o;
+  }
+}
+</script>
+</body>
+</html>

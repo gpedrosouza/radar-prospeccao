@@ -1,0 +1,320 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// Enums
+// =============================================================================
+
+enum UserRole {
+  banker
+  admin
+}
+
+enum CityCategory {
+  cidade
+  municipio
+  distrito
+}
+
+enum ExportJobStatus {
+  queued
+  running
+  completed
+  failed
+}
+
+enum CampaignStatus {
+  rascunho
+  agendada
+  enviando
+  concluida
+  falhou
+}
+
+enum RecipientStatus {
+  pendente
+  enviado
+  bounced
+  aberto
+  clicado
+  respondido
+  falhou
+}
+
+enum BounceType {
+  hard
+  soft
+}
+
+// =============================================================================
+// Modelos
+// =============================================================================
+
+model User {
+  id         String   @id @default(uuid()) @db.Uuid
+  nome       String
+  email      String   @unique
+  senha_hash String
+  papel      UserRole @default(banker)
+  criado_em  DateTime @default(now())
+
+  export_jobs     CnpjExportJob[]
+  email_campaigns EmailCampaign[]
+
+  @@map("users")
+}
+
+/// Tabela particionada por LIST(uf) com 27 partições — uma por UF do Brasil.
+/// O Prisma gera o TypeScript client a partir deste modelo, mas NÃO gerencia
+/// o DDL desta tabela. Toda alteração estrutural deve ser feita via migration
+/// SQL manual — veja a seção "Evoluindo o schema de company_cnpj" no README.
+model CompanyCnpj {
+  id                BigInt    @default(autoincrement())
+  cnpj              String    @db.Char(14)
+  razao_social      String
+  nome_fantasia     String?
+  uf                String    @db.Char(2)
+  municipio_codigo  Int
+  municipio_nome    String
+  cnae_principal    String    @db.Char(7)
+  situacao          String
+  porte             String?
+  natureza_juridica String?
+  matriz_filial     String?
+  opcao_simples     Boolean   @default(false)
+  opcao_mei         Boolean   @default(false)
+  data_abertura     DateTime? @db.Date
+  capital_social    Decimal?  @db.Decimal(15, 2)
+  email             String?
+  telefone          String?
+  endereco          String?
+  latitude          Float?
+  longitude         Float?
+  /// Coluna PostGIS — populada na fase de geocodificação. Não mapeada no client TS.
+  geom              Unsupported("geography(Point, 4326)")?
+  /// Fonte que resolveu a coordenada: cnefe_cep | cnefe_municipio | brasilapi_cep
+  /// | google_geocoding. Ver GeocodeSource em packages/shared/src/geocoding.ts.
+  geocode_source    String?   @db.VarChar(20)
+  criado_em         DateTime  @default(now())
+  atualizado_em     DateTime  @updatedAt
+
+  // PK composta obrigatória para tabelas particionadas por LIST(uf)
+  @@id([id, uf])
+  @@map("company_cnpj")
+}
+
+model City {
+  id                Int          @id @default(autoincrement())
+  codigo_ibge       Int          @unique
+  nome              String
+  uf                String       @db.Char(2)
+  categoria         CityCategory @default(municipio)
+  municipio_sede_id Int?
+  latitude          Float
+  longitude         Float
+  /// Coluna PostGIS persistida a partir de latitude/longitude — ver migration
+  /// 20260721000001_cities_geom_index. Não mapeada no client TS.
+  geom              Unsupported("geography(Point, 4326)")?
+  /// Código de município da Receita Federal (company_cnpj.municipio_codigo) —
+  /// independente de codigo_ibge. Casado por nome+UF via script de matching,
+  /// ver migration 20260721000002_cities_municipio_codigo_rf. Nulo até rodar
+  /// o script, ou se não houver correspondência.
+  municipio_codigo_rf Int?
+
+  municipio_sede City?  @relation("CidadeMunicipio", fields: [municipio_sede_id], references: [id])
+  distritos      City[] @relation("CidadeMunicipio")
+
+  @@map("cities")
+}
+
+/// Centroide por município do CNEFE/IBGE (Censo 2022) — primeira etapa (mais
+/// barata) da cascata de geocodificação. codigo_municipio usa o código IBGE,
+/// mesmo esquema de City.codigo_ibge. Ver migration
+/// 20260721000003_cnefe_municipio_centroides para o porquê de ser centroide
+/// por município em vez de lookup por CEP (dataset do IBGE não tem CEP).
+model CnefeMunicipioCentroide {
+  id               Int      @id @default(autoincrement())
+  uf               String   @db.Char(2)
+  codigo_municipio Int
+  /// Quantidade de pontos de endereço do CNEFE usados no cálculo do centroide.
+  total_enderecos  Int
+  latitude         Float
+  longitude        Float
+  /// Coluna PostGIS. Não mapeada no client TS.
+  geom             Unsupported("geography(Point, 4326)")
+  criado_em        DateTime @default(now())
+
+  @@unique([uf, codigo_municipio])
+  @@map("cnefe_municipio_centroides")
+}
+
+/// Centroide por CEP do CNEFE/IBGE (Arquivos_CNEFE, Censo 2022) — segunda
+/// etapa (mais precisa que centroide por município) da cascata de
+/// geocodificação. Ver migration 20260721000004_cnefe_ceps.
+model CnefeCep {
+  id              Int      @id @default(autoincrement())
+  cep             String   @db.Char(8)
+  uf              String   @db.Char(2)
+  /// Quantidade de pontos de endereço do CNEFE usados no cálculo do centroide.
+  total_enderecos Int
+  latitude        Float
+  longitude       Float
+  /// Coluna PostGIS. Não mapeada no client TS.
+  geom            Unsupported("geography(Point, 4326)")
+  criado_em       DateTime @default(now())
+
+  @@unique([cep])
+  @@map("cnefe_ceps")
+}
+
+model CnpjExportJob {
+  id            String          @id @default(uuid()) @db.Uuid
+  usuario_id    String          @db.Uuid
+  filtros       Json
+  status        ExportJobStatus @default(queued)
+  linhas        Int?
+  tamanho_bytes BigInt?
+  storage_key   String?
+  progresso_pct Int             @default(0) @db.SmallInt
+  erro          String?
+  criado_em     DateTime        @default(now())
+  concluido_em  DateTime?
+
+  usuario User @relation(fields: [usuario_id], references: [id])
+
+  @@map("cnpj_export_jobs")
+}
+
+// =============================================================================
+// E-mail — Fase 5 (LGPD aprovada antes de ativar em produção)
+// =============================================================================
+
+model EmailCampaign {
+  id                  String         @id @default(uuid()) @db.Uuid
+  nome                String
+  usuario_id          String         @db.Uuid
+  /// Snapshot dos filtros de CNPJ que geraram a base de destinatários.
+  filtros_origem      Json
+  assunto             String
+  /// Template em texto simples com variáveis {{razao_social}}, {{cnpj}} etc.
+  corpo_template      String
+  status              CampaignStatus @default(rascunho)
+  total_destinatarios Int            @default(0)
+  total_enviados      Int            @default(0)
+  total_bounces       Int            @default(0)
+  criado_em           DateTime       @default(now())
+  enviado_em          DateTime?
+
+  usuario       User               @relation(fields: [usuario_id], references: [id])
+  destinatarios EmailRecipient[]
+  unsubscribes  EmailUnsubscribe[]
+  reunioes      ScheduledMeeting[]
+
+  @@map("email_campaigns")
+}
+
+model EmailRecipient {
+  id          String          @id @default(uuid()) @db.Uuid
+  campaign_id String          @db.Uuid
+  /// CNPJ + UF armazenados como strings — snapshot no momento da campanha.
+  /// Sem FK para company_cnpj porque a tabela é particionada (PK composta).
+  /// Correlação posterior: JOIN ON cnpj = company_cnpj.cnpj AND uf = company_cnpj.uf.
+  cnpj        String          @db.Char(14)
+  uf          String          @db.Char(2)
+  email       String
+  status      RecipientStatus @default(pendente)
+  enviado_em  DateTime?
+  /// ID retornado pelo Resend após envio — usado para correlacionar webhooks de bounce/click.
+  resend_message_id String?
+
+  campanha EmailCampaign @relation(fields: [campaign_id], references: [id], onDelete: Cascade)
+
+  @@index([campaign_id])
+  @@index([email])
+  @@index([status])
+  @@index([resend_message_id])
+  @@map("email_recipients")
+}
+
+/// E-mails com bounce permanente ou soft. NUNCA podem receber novas campanhas.
+model EmailBounce {
+  id        String     @id @default(uuid()) @db.Uuid
+  email     String     @unique
+  tipo      BounceType
+  motivo    String?
+  criado_em DateTime   @default(now())
+
+  @@map("email_bounces")
+}
+
+/// E-mails descadastrados. NUNCA podem receber novas campanhas, permanentemente.
+model EmailUnsubscribe {
+  id                 String    @id @default(uuid()) @db.Uuid
+  email              String    @unique
+  /// Campanha que gerou o pedido de descadastro (opcional — pode vir de link fora de campanha).
+  campaign_id_origem String?   @db.Uuid
+  criado_em          DateTime  @default(now())
+
+  campanha_origem EmailCampaign? @relation(fields: [campaign_id_origem], references: [id], onDelete: SetNull)
+
+  @@map("email_unsubscribes")
+}
+
+// =============================================================================
+// Agendamento de reuniões — página pública /agende (Google Calendar API)
+// =============================================================================
+
+/// Reunião agendada via /agende — origem pode ser a landing institucional ou
+/// um link em e-mail de campanha (origem="email" + campaign_id_origem
+/// preenchido). Sem FK para company_cnpj (mesmo motivo de EmailRecipient:
+/// tabela particionada, sem PK simples para referenciar).
+model ScheduledMeeting {
+  id            String    @id @default(uuid()) @db.Uuid
+  nome_lead     String
+  email_lead    String
+  telefone_lead String?
+  /// "landing" ou "email" — de onde veio o clique em Agendar Reunião.
+  origem        String
+  /// Preenchido quando origem = "email" e o clique veio de um link de campanha.
+  campaign_id_origem String?  @db.Uuid
+  /// Cookie de sessão anônima do visitante (gr_session, pipeline de analytics) —
+  /// permite correlacionar clique → agendamento sem duplicar tracking.
+  session_id    String?
+  inicio        DateTime
+  fim           DateTime
+  /// ID do evento retornado pela Calendar API — usado para cancelar/reagendar depois.
+  google_event_id String
+  google_meet_link String?
+  status        String    @default("confirmado") // confirmado | cancelado
+  criado_em     DateTime  @default(now())
+
+  campanha_origem EmailCampaign? @relation(fields: [campaign_id_origem], references: [id], onDelete: SetNull)
+
+  @@index([email_lead])
+  @@index([origem])
+  @@index([inicio])
+  @@map("scheduled_meetings")
+}
+
+/// Cache de resultados do Google Places API por célula de grid geográfico.
+/// Evita chamadas repetidas à API para a mesma região — TTL configurável via
+/// PLACES_CACHE_TTL_DAYS (default 30 dias).
+model PlacesCache {
+  id            String   @id @default(uuid()) @db.Uuid
+  grid_cell_key String
+  keyword       String   @default("")
+  resultado     Json
+  criado_em     DateTime @default(now())
+  expira_em     DateTime
+
+  @@unique([grid_cell_key, keyword], name: "cell_keyword")
+  @@index([expira_em])
+  @@map("places_cache")
+}

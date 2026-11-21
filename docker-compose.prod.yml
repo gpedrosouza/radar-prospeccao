@@ -1,0 +1,207 @@
+# =============================================================================
+# Radar Prospecção — Docker Compose de PRODUÇÃO
+#
+# Uso:
+#   docker compose --env-file .env.production -f docker-compose.prod.yml up -d
+#
+# O flag --env-file garante que as variáveis sejam usadas tanto para
+# substituição no YAML (${VAR}) quanto dentro dos containers (env_file).
+#
+# Nunca use o docker-compose.yml (dev) neste ambiente — ele expõe portas
+# diretamente no host e usa MinIO no lugar do Cloudflare R2.
+# =============================================================================
+
+services:
+
+  # ── Reverse proxy com HTTPS automático (Let's Encrypt) ──────────────────────
+  caddy:
+    image: caddy:2
+    container_name: radar_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"     # HTTP → HTTPS redirect (gerenciado pelo Caddy)
+      - "443:443"   # HTTPS
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data       # certificados TLS (persistir entre restarts!)
+      - caddy_config:/config   # config cache do Caddy
+    environment:
+      DOMAIN:     ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    depends_on:
+      web:
+        condition: service_healthy
+    networks:
+      - radar
+
+  # ── Aplicação Next.js ────────────────────────────────────────────────────────
+  web:
+    image: ${GHCR_IMAGE_PREFIX}/radar-web:latest
+    container_name: radar_web
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      # Sobrescreve DATABASE_URL e REDIS_URL para usar os hostnames de serviço
+      # Docker (não localhost) — as demais vars vêm de .env.production
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public"
+      REDIS_URL:    "redis://:${REDIS_PASSWORD}@redis:6379"
+      NODE_ENV:     "production"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # /api/health retorna 200 quando o Next.js está pronto
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - radar
+
+  # ── Worker: exportação CSV para R2 ──────────────────────────────────────────
+  worker-export:
+    image: ${GHCR_IMAGE_PREFIX}/radar-workers:latest
+    container_name: radar_worker_export
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public"
+      REDIS_URL:    "redis://:${REDIS_PASSWORD}@redis:6379"
+      NODE_ENV:     "production"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - radar
+
+  # ── Backup automático do PostgreSQL ─────────────────────────────────────────
+  # Container dedicado que roda crond (busybox) com schedule 0 3 * * * UTC.
+  # Usa a imagem workers (tem Node.js + pg_dump + @aws-sdk) — sem imagem extra.
+  # Logs: docker logs radar_backup_cron
+  #
+  # Por que container e não cron do host?
+  #   - Autocontido: não depende de setup manual na VPS
+  #   - Reinicia com `restart: unless-stopped` se o host reboota
+  #   - Configuração fica no git (docker-compose.prod.yml), não em /etc/crontab
+  backup-cron:
+    image: ${GHCR_IMAGE_PREFIX}/radar-workers:latest
+    container_name: radar_backup_cron
+    restart: unless-stopped
+    user: "0"   # crond do busybox precisa de root para ler /var/spool/cron/crontabs
+    env_file:
+      - .env.production
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public"
+      NODE_ENV: "production"
+    command: >
+      sh -c "
+        mkdir -p /var/spool/cron/crontabs &&
+        echo '0 3 * * * cd /app && node apps/workers/dist/scripts/backup-postgres.js >> /proc/1/fd/1 2>&1'
+          > /var/spool/cron/crontabs/root &&
+        echo '[backup-cron] agendado para 03:00 UTC diariamente' &&
+        crond -f -l 2
+      "
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - radar
+
+  # ── Migrator: roda `prisma migrate deploy` e sai ───────────────────────────
+  # Iniciado apenas via `docker compose run --rm migrator` (não sobe com `up -d`
+  # por causa do profile). Falha de migration impede o deploy de prosseguir.
+  migrator:
+    image: ${GHCR_IMAGE_PREFIX}/radar-workers:latest
+    container_name: radar_migrator
+    env_file:
+      - .env.production
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public"
+      NODE_ENV: "production"
+    command:
+      - node
+      - node_modules/.bin/prisma
+      - migrate
+      - deploy
+      - --schema=packages/db/prisma/schema.prisma
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - migrate
+    networks:
+      - radar
+
+  # ── PostgreSQL 16 + PostGIS 3.4 ─────────────────────────────────────────────
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: radar_postgres
+    restart: unless-stopped
+    env_file:
+      - .env.production   # precisa de POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    shm_size: "2gb"
+    # Tuning para 66M registros. Ajuste PG_SHARED_BUFFERS e PG_EFFECTIVE_CACHE_SIZE
+    # conforme a RAM disponível na VPS (regra: shared_buffers ≈ 25% da RAM total).
+    command: >
+      postgres
+      -c shared_buffers=${PG_SHARED_BUFFERS:-2GB}
+      -c effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-6GB}
+      -c work_mem=64MB
+      -c maintenance_work_mem=512MB
+      -c max_parallel_workers_per_gather=4
+      -c max_parallel_workers=4
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=64MB
+      -c random_page_cost=1.1
+      -c log_min_duration_statement=1000
+      -c log_destination=stderr
+      -c log_connections=off
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - radar
+
+  # ── Redis 7 ─────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: radar_redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - radar
+
+volumes:
+  postgres_data:   # dados do PostgreSQL — NUNCA delete em produção
+  redis_data:      # dados do Redis (AOF)
+  caddy_data:      # certificados TLS do Caddy
+  caddy_config:    # cache de configuração do Caddy
+
+networks:
+  radar:
+    driver: bridge
+    # Nenhuma porta é mapeada diretamente ao host exceto 80/443 pelo Caddy.
+    # postgres e redis só são acessíveis por dentro desta rede.
