@@ -58,10 +58,10 @@ scripts/matches-receita.*
 scripts/web-targets.json
 
 # Templates de e-mail comercial — conteúdo de campanha da GR, não código
-campanhas/
+/campanhas/
 
 # Exportações CSV geradas localmente (em produção vão para R2)
-exports/
+/exports/
 
 # Listas de e-mail de teste (dado pessoal, nunca commitar) — ver
 # apps/workers/src/scripts/seed-test-emails.ts
