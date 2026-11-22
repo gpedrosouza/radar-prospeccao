@@ -37,6 +37,13 @@ import { GET } from "@/app/api/cnpj/companies/route";
 
 const prisma = new PrismaClient();
 
+// As tabelas de domínio da Receita (natureza jurídica, estrutura CNAE) são
+// criadas pelo importador, não pelas migrations: sem o import (ex.: na CI),
+// os testes que dependem delas são pulados em vez de falhar.
+const [{ ok: hasReceitaLookups }] = await prisma.$queryRaw<Array<{ ok: boolean }>>`
+  SELECT to_regclass('public.lookup_natureza_juridica') IS NOT NULL
+     AND to_regclass('public.lookup_cnae_estrutura') IS NOT NULL AS ok`;
+
 function makeRequest(url: string): Request {
   const req = new Request(url);
   (req as Record<string, unknown>).nextUrl = new URL(url);
@@ -121,7 +128,7 @@ describe("GET /api/cnpj/companies — shape", () => {
     }
   });
 
-  it("aceita filtro por natureza jurídica (código da Receita)", async () => {
+  it.skipIf(!hasReceitaLookups)("aceita filtro por natureza jurídica (código da Receita)", async () => {
     const res = await GET(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       makeRequest("http://localhost/api/cnpj/companies?uf=SP&naturezas_juridicas=2135&limit=5") as any
@@ -165,7 +172,7 @@ describe("GET /api/cnpj/companies — shape", () => {
     }
   });
 
-  it("filtra por setor (seção CNAE) traduzindo em divisões", async () => {
+  it.skipIf(!hasReceitaLookups)("filtra por setor (seção CNAE) traduzindo em divisões", async () => {
     const res = await GET(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       makeRequest("http://localhost/api/cnpj/companies?uf=SP&cnae_secoes=G&limit=20") as any
